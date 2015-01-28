@@ -19,7 +19,6 @@ def read_json(path, name):
     if os.path.isfile(full_path):
         json_data=open(full_path)
         data = json.load(json_data)
-        #pprint(data[0]['thread'])
         json_data.close()
         return data
 
@@ -33,7 +32,6 @@ def main(args):
                 author = post.get("author")
                 thread = post.get("thread")
                 post_text = post.get("post")
-                print thread
                 MarkovParser("700Level", Db()).parse(post_text, author, 2)
 
 

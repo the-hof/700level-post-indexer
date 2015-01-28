@@ -17,7 +17,6 @@ class MarkovParser:
     def parse(self, txt, author, depth):
         if txt is not None:
             sentences = txt.split(self.sentence_split_char)
-            i = 0
 
             for sentence in sentences:
                 sentence = self.whitespace_regex.sub(" ", sentence).strip()
@@ -33,10 +32,4 @@ class MarkovParser:
                         + [MarkovParser.SENTENCE_END_SYMBOL] * (depth - 1)
 
                 for n in range(0, len(words) - depth + 1):
-                    self.db.add_words(author, "700level", words[n:n+depth])
-
-                #self.db.commit()
-                i += 1
-                if i % 1000 == 0:
-                    print i
-                    sys.stdout.flush()
+                    self.db.add_markov_chain(author, "700level", depth, words[n:n+depth])
