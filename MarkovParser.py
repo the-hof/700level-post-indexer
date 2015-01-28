@@ -1,4 +1,3 @@
-import sys
 import re
 
 
@@ -32,4 +31,4 @@ class MarkovParser:
                         + [MarkovParser.SENTENCE_END_SYMBOL] * (depth - 1)
 
                 for n in range(0, len(words) - depth + 1):
-                    self.db.add_markov_chain(author, "700level", depth, words[n:n+depth])
+                    self.db.add_markov_chain(author, "700level", words[n:n+depth])
