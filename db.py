@@ -9,11 +9,17 @@ class Db:
         self._setup(project, depth)
 
     def _setup(self, project, depth):
-        table_name = self._get_tuples_table_name(depth)
-        sql = "DELETE FROM %s WHERE project_name = '%s'" % (table_name, project)
-        self.cursor.execute(sql)
+        tuples_table_name = self._get_tuples_table_name(depth)
+        stats_table_name = self._get_stats_table_name()
+        tuples_sql = "DELETE FROM %s WHERE project_name = '%s'" % (tuples_table_name, project)
+        self.cursor.execute(tuples_sql)
+        stats_sql = "DELETE FROM %s WHERE project_name = '%s'" % (stats_table_name, project)
+        self.cursor.execute(stats_sql)
         self.conn.commit()
 
+    #######################################
+    ## MARKOV TUPLES
+    #######################################
 
     def _get_tuples_table_name(self, depth):
         return "word_" + str(depth) + "_tuples"
@@ -100,3 +106,79 @@ class Db:
 
             self.cursor.execute(sql, values)
             self.conn.commit()
+
+    #######################################
+    ## RUNNING STATS
+    #######################################
+
+    def _get_stats_table_name(self):
+        return "stats"
+
+    def _get_stats_columns(self):
+        columns = []
+        columns.append("author")
+        columns.append("project_name")
+        return columns
+
+    def _get_stats_values(self, author, project):
+        values = []
+        values.append(author)
+        values.append(project)
+        return values
+
+    def _get_stats_filter_string(self):
+        filter = []
+        filter.append("author = %s")
+        filter.append(" AND project_name = %s")
+        sql = "".join(i for i in filter)
+        return sql
+
+    def _get_stats_filter_values(self, author, project):
+        filter_values = []
+        filter_values.append(author)
+        filter_values.append(project)
+        return filter_values
+
+    def _get_stats(self, author, project):
+        table_name = self._get_stats_table_name()
+        filter_string = self._get_stats_filter_string()
+        filter_values = self._get_stats_filter_values(author, project)
+
+        sql = "SELECT word_count, post_count FROM %s WHERE %s" % (table_name, filter_string)
+
+        self.cursor.execute(sql, filter_values)
+        r = self.cursor.fetchone()
+
+        if r:
+            return r
+        else:
+            return None
+
+    def update_stats(self, author, post_length):
+        table = self._get_stats_table_name()
+        words = post_length
+        posts = 1
+
+        stats = self._get_stats(author, self.project)
+
+        if stats:
+            words = words + stats[0]
+            posts = posts + stats[1]
+        else:
+            #set up column sql
+            insert_columns = self._get_stats_columns()
+            insert_column_string = ','.join(i for i in insert_columns)
+
+            #set up values sql
+            insert_values = self._get_stats_values(author, self.project)
+            insert_value_string = ','.join('%s' for i in insert_values)
+
+            insert_sql = "INSERT INTO %s (%s) VALUES (%s)" % (table, insert_column_string, insert_value_string)
+            self.cursor.execute(insert_sql, insert_values)
+            self.conn.commit()
+
+        filter = self._get_stats_filter_string()
+        values = self._get_stats_filter_values(author, self.project)
+        sql = "UPDATE %s SET word_count = %s, post_count = %s WHERE %s" % (table, str(words), str(posts), filter)
+        self.cursor.execute(sql, values)
+        self.conn.commit()
