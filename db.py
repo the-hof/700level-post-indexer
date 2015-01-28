@@ -1,9 +1,19 @@
 import pg8000
 
 class Db:
-    def __init__(self):
+    def __init__(self, project, depth):
+        self.project = project
+        self.depth = depth
         self.conn = pg8000.connect(user="postgres", password="postgres", database="700level")
         self.cursor = self.conn.cursor()
+        self._setup(project, depth)
+
+    def _setup(self, project, depth):
+        table_name = self._get_tuples_table_name(depth)
+        sql = "DELETE FROM %s WHERE project_name = '%s'" % (table_name, project)
+        self.cursor.execute(sql)
+        self.conn.commit()
+
 
     def _get_tuples_table_name(self, depth):
         return "word_" + str(depth) + "_tuples"
@@ -29,18 +39,18 @@ class Db:
     def _get_markov_filter_string(self, word_list):
         filter = []
         filter.append("author = %s")
-        filter.append(" AND project_name = %s")
         for x in range(1,len(word_list)+1):
             filter.append(" AND word_" + str(x) + " = %s")
+        filter.append(" AND project_name = %s")
         sql = "".join(i for i in filter)
         return sql
 
     def _get_markov_filter_values(self, author, project, word_list):
         filter_values = []
         filter_values.append(author)
-        filter_values.append(project)
         for x in range(0,len(word_list)):
             filter_values.append(word_list[x])
+        filter_values.append(project)
         return filter_values
 
     def _get_frequency(self, author, project, word_list):
@@ -58,7 +68,7 @@ class Db:
         else:
             return 0
 
-    def add_markov_chain(self, author, project, word_list):
+    def add_markov_chain(self, author, word_list):
         is_valid = True
 
         #check lengths of each word and skip any pairs that have unusually long words
@@ -67,18 +77,26 @@ class Db:
                 is_valid = False
 
         if is_valid:
-            frequency = self._get_frequency(author, project, word_list) + 1
-
-            #set up column sql
-            columns = self._get_markov_columns(len(word_list))
-            column_string = ','.join(i for i in columns)
-
-            #set up values sql
-            values = self._get_markov_values(author, project, frequency, word_list)
-            value_string = ','.join('%s' for i in values)
-
-            #assemble and execute
             table_name = self._get_tuples_table_name(len(word_list))
-            sql = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, column_string, value_string)
+            frequency = self._get_frequency(author, self.project, word_list) + 1
+
+            if frequency == 1:
+                #set up column sql
+                columns = self._get_markov_columns(len(word_list))
+                column_string = ','.join(i for i in columns)
+
+                #set up values sql
+                values = self._get_markov_values(author, self.project, frequency, word_list)
+                value_string = ','.join('%s' for i in values)
+
+                #assemble and execute
+
+                sql = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, column_string, value_string)
+            else:
+                filter_string = self._get_markov_filter_string(word_list)
+                values = self._get_markov_filter_values(author, self.project, word_list)
+
+                sql = "UPDATE %s SET frequency = %s WHERE %s" % (table_name, str(frequency), filter_string)
+
             self.cursor.execute(sql, values)
             self.conn.commit()

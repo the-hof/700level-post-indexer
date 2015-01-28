@@ -27,6 +27,7 @@ def main(args):
     if (len(args)) > 2:
         directory_name = args[1]
         depth = int(args[2])
+        db = Db("700level", depth)
         files = list_files(directory_name)
         for file in files:
             post_list = read_json(directory_name, file)
@@ -34,7 +35,7 @@ def main(args):
                 author = post.get("author")
                 #thread = post.get("thread")
                 post_text = post.get("post")
-                MarkovParser("700Level", Db()).parse(post_text, author, depth)
+                MarkovParser("700Level", db).parse(post_text, author, depth)
 
 
 if __name__ == "__main__":

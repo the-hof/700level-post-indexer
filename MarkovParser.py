@@ -30,5 +30,7 @@ class MarkovParser:
                         + list_of_words \
                         + [MarkovParser.SENTENCE_END_SYMBOL] * (depth - 1)
 
+                post_length = len(list_of_words)
+
                 for n in range(0, len(words) - depth + 1):
-                    self.db.add_markov_chain(author, "700level", words[n:n+depth])
+                    self.db.add_markov_chain(author, words[n:n+depth])
