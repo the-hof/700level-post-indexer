@@ -1,14 +1,13 @@
 import pg8000
 
 class Db:
-    def __init__(self, project, depth):
-        self.project = project
-        self.depth = depth
+    def __init__(self):
         self.conn = pg8000.connect(user="postgres", password="postgres", database="700level")
         self.cursor = self.conn.cursor()
-        self._setup(project, depth)
 
-    def _setup(self, project, depth):
+    def init_project(self, project, depth):
+        self.project = project
+        self.depth = depth
         tuples_table_name = self._get_tuples_table_name(depth)
         stats_table_name = self._get_stats_table_name()
         tuples_sql = "DELETE FROM %s WHERE project_name = '%s'" % (tuples_table_name, project)
@@ -18,7 +17,46 @@ class Db:
         self.conn.commit()
 
     #######################################
-    ## MARKOV TUPLES
+    ## GET MARKOV TUPLES (uses rollup tables)
+    #######################################
+    def _get_rollup_table_name(self, depth):
+        return "markov_rollup_" + str(depth)
+
+    def _get_rollup_filter_string(self, word_list):
+        filter = []
+        filter.append("author = %s")
+
+        filter.append(" AND project_name = %s")
+        for x in range(1,len(word_list)+1):
+            filter.append(" AND word_" + str(x) + " = %s")
+        sql = "".join(i for i in filter)
+        return sql
+
+    def _get_rollup_filter_values(self, author, project, word_list):
+        filter_values = []
+        filter_values.append(author)
+        filter_values.append(project)
+        for x in range(0,len(word_list)):
+            filter_values.append(word_list[x])
+        return filter_values
+
+    def get_next_markov_chain(self, author, project, word_list):
+        table_name = self._get_rollup_table_name(len(word_list)+1)
+        filter_string = self._get_rollup_filter_string(word_list)
+        filter_values = self._get_rollup_filter_values(author, project, word_list)
+        word_field = "word_" + str(len(word_list)+1)
+
+        sql = "select %s, frequency from %s where %s" % (word_field, table_name, filter_string)
+        chain = {}
+        self.cursor.execute(sql, filter_values)
+        data = self.cursor.fetchall()
+        for row in data:
+            chain[row[0]] = row[1]
+
+        return chain
+
+    #######################################
+    ## ADD MARKOV TUPLES
     #######################################
 
     def _get_tuples_table_name(self, depth):
@@ -84,7 +122,8 @@ class Db:
 
         if is_valid:
             table_name = self._get_tuples_table_name(len(word_list))
-            frequency = self._get_frequency(author, self.project, word_list) + 1
+            #frequency = self._get_frequency(author, self.project, word_list) + 1
+            frequency = 1
 
             if frequency == 1:
                 #set up column sql
@@ -108,7 +147,7 @@ class Db:
             self.conn.commit()
 
     #######################################
-    ## RUNNING STATS
+    ## ADD RUNNING STATS
     #######################################
 
     def _get_stats_table_name(self):

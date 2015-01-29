@@ -27,14 +27,19 @@ def main(args):
     if (len(args)) > 2:
         directory_name = args[1]
         depth = int(args[2])
-        db = Db("700level", depth)
+        db = Db()
+        db.init_project("700level", depth)
         files = list_files(directory_name)
         for file in files:
             post_list = read_json(directory_name, file)
+            post_count = len(post_list)
+            i = 0
             for post in post_list:
+                i = i + 1
                 author = post.get("author")
                 #thread = post.get("thread")
                 post_text = post.get("post")
+                print file + ": " + str(i) + " out of " + str(post_count)
                 MarkovParser("700Level", db).parse(post_text, author, depth)
 
 
