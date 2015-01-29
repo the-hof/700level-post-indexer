@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import argparse
 from MarkovParser import MarkovParser
 from db import Db
 
@@ -23,24 +24,39 @@ def read_json(path, name):
         json_data.close()
         return data
 
+def args_are_valid(args):
+    if args.input and args.project:
+        return True
+    else:
+        return False
+
 def main(args):
-    if (len(args)) > 2:
-        directory_name = args[1]
-        depth = int(args[2])
-        db = Db()
-        db.init_project("700level", depth)
-        files = list_files(directory_name)
-        for file in files:
-            post_list = read_json(directory_name, file)
-            post_count = len(post_list)
-            i = 0
-            for post in post_list:
-                i = i + 1
-                author = post.get("author")
-                #thread = post.get("thread")
-                post_text = post.get("post")
-                print file + ": " + str(i) + " out of " + str(post_count)
-                MarkovParser("700Level", db).parse(post_text, author, depth)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", help="directory of input files")
+    parser.add_argument("--project", help="use this project corpus")
+    parser.add_argument("--depth", help="depth of markov chain to use")
+    args = parser.parse_args()
+
+    if args.depth == None:
+        depth = 2
+    else:
+        depth = int(args.depth)
+
+    directory_name = args.input
+    db = Db()
+    db.init_project(args.project, depth)
+    files = list_files(directory_name)
+    for file in files:
+        post_list = read_json(directory_name, file)
+        post_count = len(post_list)
+        i = 0
+        for post in post_list:
+            i = i + 1
+            author = post.get("author")
+            # thread = post.get("thread")
+            post_text = post.get("post")
+            print file + ": " + str(i) + " out of " + str(post_count)
+            MarkovParser("700Level", db).parse(post_text, author, depth)
 
 
 if __name__ == "__main__":

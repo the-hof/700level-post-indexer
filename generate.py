@@ -1,7 +1,8 @@
 import sys
+import argparse
 from db import Db
 from MarkovGenerator import MarkovGenerator
-import argparse
+
 
 def args_are_valid(args):
     if args.user and args.project:
