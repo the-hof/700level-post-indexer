@@ -5,6 +5,26 @@ import argparse
 from MarkovParser import MarkovParser
 from db import Db
 
+from HTMLParser import HTMLParser
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+    def handle_data(self, d):
+        self.fed.append(d)
+    def handle_entityref(self, name):
+        self.fed.append('&%s;' % name)
+    def get_data(self):
+        return ''.join(self.fed)
+
+
+def html_to_text(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
 def list_files(path):
     # returns a list of names (with extension, without full path) of all files
     # in folder path
@@ -54,7 +74,7 @@ def main(args):
             i = i + 1
             author = post.get("author")
             # thread = post.get("thread")
-            post_text = post.get("post")
+            post_text = html_to_text(post.get("post"))
             print file + ": " + str(i) + " out of " + str(post_count)
             MarkovParser("700Level", db).parse(post_text, author, depth)
 
