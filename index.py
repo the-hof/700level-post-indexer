@@ -22,8 +22,11 @@ class MLStripper(HTMLParser):
 
 def html_to_text(html):
     s = MLStripper()
-    s.feed(html)
-    return s.get_data()
+    if html is None:
+        return None
+    else:
+        s.feed(html)
+        return s.get_data()
 
 def list_files(path):
     # returns a list of names (with extension, without full path) of all files
@@ -76,7 +79,8 @@ def main(args):
             # thread = post.get("thread")
             post_text = html_to_text(post.get("post"))
             print file + ": " + str(i) + " out of " + str(post_count)
-            MarkovParser("700Level", db).parse(post_text, author, depth)
+            if post_text is not None:
+                MarkovParser("700Level", db).parse(post_text, author, depth)
 
 
 if __name__ == "__main__":
